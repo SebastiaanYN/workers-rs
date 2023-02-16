@@ -53,7 +53,8 @@ pub fn expand_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
             let error_handling = match respond_with_errors {
                 true => {
                     quote! {
-                        ::worker::Response::error(e.to_string(), 500).unwrap().into()
+                        let res = ::http::Response::builder().status(500).body(e.to_string()).unwrap();
+                        ::worker::response::response_to_js(res)
                     }
                 }
                 false => {
@@ -71,7 +72,7 @@ pub fn expand_macro(attr: TokenStream, item: TokenStream) -> TokenStream {
                 ) -> ::worker::worker_sys::Response {
                     let ctx = worker::Context::new(ctx);
                     // get the worker::Result<worker::Response> by calling the original fn
-                    match #input_fn_ident(::worker::Request::from(req), env, ctx).await.map(::worker::worker_sys::Response::from) {
+                    match #input_fn_ident(::worker::request::request_from_js(req), env, ctx).await.map(::worker::response::response_to_js) {
                         Ok(res) => res,
                         Err(e) => {
                             ::worker::console_log!("{}", &e);

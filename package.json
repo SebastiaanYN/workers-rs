@@ -11,5 +11,8 @@
   "bugs": {
     "url": "https://github.com/cloudflare/workers-rs/issues"
   },
-  "homepage": "https://github.com/cloudflare/workers-rs#readme"
+  "homepage": "https://github.com/cloudflare/workers-rs#readme",
+  "devDependencies": {
+    "wrangler": "^2.4.2"
+  }
 }

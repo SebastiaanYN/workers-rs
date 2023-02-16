@@ -1,0 +1,7 @@
+name = "axum-test"
+compatibility_date = "2023-02-15"
+
+main = "build/worker/shim.mjs"
+
+[build]
+command = "cargo install worker-build && worker-build --release"

@@ -1,4 +1,4 @@
-use crate::{Error, Fetch, Method, Request, Result};
+use crate::{fetch, Error, Result};
 use futures_channel::mpsc::UnboundedReceiver;
 use futures_util::Stream;
 use serde::Serialize;
@@ -73,12 +73,14 @@ impl WebSocket {
         // those connections into websockets if we use the `Upgrade` header.
         url.set_scheme(&scheme).unwrap();
 
-        let mut req = Request::new(url.as_str(), Method::Get)?;
-        req.headers_mut()?.set("upgrade", "websocket")?;
+        let req = http::Request::get(url.as_str())
+            .header(http::header::UPGRADE, "websocket")
+            .body("".to_string())
+            .unwrap();
 
-        let res = Fetch::Request(req).send().await?;
+        let mut res = fetch(req).await?;
 
-        match res.websocket() {
+        match res.extensions_mut().remove::<WebSocket>() {
             Some(ws) => Ok(ws),
             None => Err(Error::RustError("server did not accept".into())),
         }

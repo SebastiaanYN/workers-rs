@@ -100,6 +100,6 @@ extern "C" {
     #[wasm_bindgen(structural, method, getter, js_name=certPresented, js_class = "tlsClientAuth")]
     pub fn cert_presented(this: &TlsClientAuth) -> String;
 
-    #[wasm_bindgen(structural, method, getter, js_name=certSubjectDNRFC225, js_class = "tlsClientAuth")]
-    pub fn cert_subject_dn_rfc225(this: &TlsClientAuth) -> String;
+    #[wasm_bindgen(structural, method, getter, js_name=certSubjectDNRFC2253, js_class = "tlsClientAuth")]
+    pub fn cert_subject_dn_rfc2253(this: &TlsClientAuth) -> String;
 }

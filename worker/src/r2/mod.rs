@@ -12,10 +12,10 @@ use worker_sys::{
         R2Object as EdgeR2Object, R2ObjectBody as EdgeR2ObjectBody, R2Objects as EdgeR2Objects,
         R2UploadedPart as EdgeR2UploadedPart,
     },
-    FixedLengthStream as EdgeFixedLengthStream,
+    FixedLengthStream as EdgeFixedLengthStream, Headers,
 };
 
-use crate::{env::EnvBinding, ByteStream, Date, Error, FixedLengthStream, Headers, Result};
+use crate::{env::EnvBinding, ByteStream, Date, Error, FixedLengthStream, Result};
 
 mod builder;
 
@@ -256,10 +256,17 @@ impl Object {
         }
     }
 
-    pub fn write_http_metadata(&self, headers: Headers) -> Result<()> {
+    pub fn write_http_metadata(&self, headers: http::HeaderMap) -> Result<()> {
+        let js_headers = Headers::new().unwrap();
+        for (name, value) in &headers {
+            if let Ok(value) = value.to_str() {
+                js_headers.append(name.as_str(), value)?;
+            }
+        }
+
         match &self.inner {
-            ObjectInner::NoBody(inner) => inner.write_http_metadata(headers.0)?,
-            ObjectInner::Body(inner) => inner.write_http_metadata(headers.0)?,
+            ObjectInner::NoBody(inner) => inner.write_http_metadata(js_headers)?,
+            ObjectInner::Body(inner) => inner.write_http_metadata(js_headers)?,
         };
 
         Ok(())

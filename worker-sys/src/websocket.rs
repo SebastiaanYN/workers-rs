@@ -97,3 +97,6 @@ extern "C" {
         value: Option<&::js_sys::Function>,
     ) -> Result<(), JsValue>;
 }
+
+unsafe impl Send for WebSocket {}
+unsafe impl Sync for WebSocket {}

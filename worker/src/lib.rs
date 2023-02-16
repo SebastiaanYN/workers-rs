@@ -15,7 +15,7 @@ pub use wasm_bindgen;
 pub use wasm_bindgen_futures;
 pub use worker_kv as kv;
 
-pub use cf::Cf;
+pub use cf::CloudflareProperties;
 pub use worker_macros::{durable_object, event};
 #[doc(hidden)]
 pub use worker_sys;
@@ -31,23 +31,18 @@ pub use crate::durable::*;
 pub use crate::dynamic_dispatch::*;
 pub use crate::env::{Env, Secret, Var};
 pub use crate::error::Error;
+pub use crate::fetch::*;
 pub use crate::fetcher::Fetcher;
 pub use crate::formdata::*;
-pub use crate::global::Fetch;
-pub use crate::headers::Headers;
-pub use crate::http::Method;
 #[cfg(feature = "queue")]
 pub use crate::queue::*;
 pub use crate::r2::*;
-pub use crate::request::Request;
-pub use crate::request_init::*;
-pub use crate::response::{Response, ResponseBody};
-pub use crate::router::{RouteContext, RouteParams, Router};
 pub use crate::schedule::*;
 pub use crate::streams::*;
 pub use crate::websocket::*;
 
 mod abort;
+pub mod body;
 mod cache;
 mod cf;
 mod context;
@@ -58,18 +53,14 @@ pub mod durable;
 mod dynamic_dispatch;
 mod env;
 mod error;
+mod fetch;
 mod fetcher;
 mod formdata;
-mod global;
-mod headers;
-mod http;
 #[cfg(feature = "queue")]
 mod queue;
 mod r2;
-mod request;
-mod request_init;
-mod response;
-mod router;
+pub mod request;
+pub mod response;
 mod schedule;
 mod streams;
 mod websocket;

@@ -1,4 +1,8 @@
-use crate::{Error, Headers, Method, Result};
+use std::convert::TryInto;
+
+use http::Method;
+
+use crate::{Error, Result};
 
 /// Cors struct, holding cors configuration
 #[derive(Debug, Clone)]
@@ -83,36 +87,70 @@ impl Cors {
     }
 
     /// Applies the cors configuration to response headers.
-    pub fn apply_headers(&self, headers: &mut Headers) -> Result<()> {
+    pub fn apply_headers(&self, headers: &mut http::HeaderMap) -> Result<()> {
         if self.credentials {
-            headers.set("Access-Control-Allow-Credentials", "true")?;
+            headers
+                .insert(
+                    "Access-Control-Allow-Credentials",
+                    "true".try_into().unwrap(),
+                )
+                .unwrap();
         }
         if let Some(ref max_age) = self.max_age {
-            headers.set("Access-Control-Max-Age", format!("{max_age}").as_str())?;
+            headers
+                .insert(
+                    "Access-Control-Max-Age",
+                    format!("{max_age}").as_str().try_into().unwrap(),
+                )
+                .unwrap();
         }
         if !self.origins.is_empty() {
-            headers.set(
-                "Access-Control-Allow-Origin",
-                concat_vec_to_string(self.origins.as_slice())?.as_str(),
-            )?;
+            headers
+                .insert(
+                    "Access-Control-Allow-Origin",
+                    concat_vec_to_string(self.origins.as_slice())
+                        .unwrap()
+                        .as_str()
+                        .try_into()
+                        .unwrap(),
+                )
+                .unwrap();
         }
         if !self.methods.is_empty() {
-            headers.set(
-                "Access-Control-Allow-Methods",
-                concat_vec_to_string(self.methods.as_slice())?.as_str(),
-            )?;
+            headers
+                .insert(
+                    "Access-Control-Allow-Methods",
+                    concat_vec_to_string(self.methods.as_slice())
+                        .unwrap()
+                        .as_str()
+                        .try_into()
+                        .unwrap(),
+                )
+                .unwrap();
         }
         if !self.allowed_headers.is_empty() {
-            headers.set(
-                "Access-Control-Allow-Headers",
-                concat_vec_to_string(self.allowed_headers.as_slice())?.as_str(),
-            )?;
+            headers
+                .insert(
+                    "Access-Control-Allow-Headers",
+                    concat_vec_to_string(self.allowed_headers.as_slice())
+                        .unwrap()
+                        .as_str()
+                        .try_into()
+                        .unwrap(),
+                )
+                .unwrap();
         }
         if !self.exposed_headers.is_empty() {
-            headers.set(
-                "Access-Control-Expose-headers",
-                concat_vec_to_string(self.exposed_headers.as_slice())?.as_str(),
-            )?;
+            headers
+                .insert(
+                    "Access-Control-Expose-headers",
+                    concat_vec_to_string(self.exposed_headers.as_slice())
+                        .unwrap()
+                        .as_str()
+                        .try_into()
+                        .unwrap(),
+                )
+                .unwrap();
         }
         Ok(())
     }

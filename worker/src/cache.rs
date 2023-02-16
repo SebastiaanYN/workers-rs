@@ -8,8 +8,10 @@ use worker_sys::cache::Cache as EdgeCache;
 use worker_sys::Response as EdgeResponse;
 use worker_sys::WorkerGlobalScope;
 
-use crate::request::Request;
-use crate::response::Response;
+use crate::body::Body;
+use crate::request::request_to_js;
+use crate::response::response_from_js;
+use crate::response::response_to_js;
 use crate::Result;
 
 /// Provides access to the [Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache).
@@ -76,12 +78,16 @@ impl Cache {
     /// - the request passed is a method other than GET.
     /// - the response passed has a status of 206 Partial Content.
     /// - the response passed contains the header `Vary: *` (required by the Cache API specification).
-    pub async fn put<'a, K: Into<CacheKey<'a>>>(&self, key: K, response: Response) -> Result<()> {
+    pub async fn put<K, B>(&self, key: K, response: http::Response<B>) -> Result<()>
+    where
+        K: Into<CacheKey<B>>,
+        B: http_body::Body + 'static,
+    {
         let promise = match key.into() {
-            CacheKey::Url(url) => self.inner.put_url(url.as_str(), &response.into()),
+            CacheKey::Url(url) => self.inner.put_url(url.as_str(), &response_to_js(response)),
             CacheKey::Request(request) => self
                 .inner
-                .put_request(&request.try_into()?, &response.into()),
+                .put_request(&request_to_js(request), &response_to_js(response)),
         };
         let _ = JsFuture::from(promise).await?;
         Ok(())
@@ -101,15 +107,21 @@ impl Cache {
     ///   - Results in a `304` response if a matching response is found with a `Last-Modified` header with a value after the time specified in `If-Modified-Since`.
     /// - If-None-Match
     ///   - Results in a `304` response if a matching response is found with an `ETag` header with a value that matches a value in `If-None-Match.`
-    pub async fn get<'a, K: Into<CacheKey<'a>>>(
+    pub async fn get<K, B>(
         &self,
         key: K,
         ignore_method: bool,
-    ) -> Result<Option<Response>> {
+    ) -> Result<Option<http::Response<Body>>>
+    where
+        K: Into<CacheKey<B>>,
+        B: http_body::Body + 'static,
+    {
         let options = serde_wasm_bindgen::to_value(&MatchOptions { ignore_method })?;
         let promise = match key.into() {
             CacheKey::Url(url) => self.inner.match_url(url.as_str(), options),
-            CacheKey::Request(request) => self.inner.match_request(&request.try_into()?, options),
+            CacheKey::Request(request) => {
+                self.inner.match_request(&request_to_js(request), options)
+            }
         };
 
         // `match` returns either a response or undefined
@@ -118,7 +130,7 @@ impl Cache {
             Ok(None)
         } else {
             let edge_response: EdgeResponse = result.into();
-            let response = Response::from(edge_response);
+            let response = response_from_js(edge_response);
             Ok(Some(response))
         }
     }
@@ -128,16 +140,18 @@ impl Cache {
     /// Returns:
     ///   - Success, if the response was cached but is now deleted
     ///   - ResponseNotFound, if the response was not in the cache at the time of deletion
-    pub async fn delete<'a, K: Into<CacheKey<'a>>>(
-        &self,
-        key: K,
-        ignore_method: bool,
-    ) -> Result<CacheDeletionOutcome> {
+    pub async fn delete<K, B>(&self, key: K, ignore_method: bool) -> Result<CacheDeletionOutcome>
+    where
+        K: Into<CacheKey<B>>,
+        B: http_body::Body + 'static,
+    {
         let options = serde_wasm_bindgen::to_value(&MatchOptions { ignore_method })?;
 
         let promise = match key.into() {
             CacheKey::Url(url) => self.inner.delete_url(url.as_str(), options),
-            CacheKey::Request(request) => self.inner.delete_request(&request.try_into()?, options),
+            CacheKey::Request(request) => {
+                self.inner.delete_request(&request_to_js(request), options)
+            }
         };
         let result = JsFuture::from(promise).await?;
 
@@ -160,31 +174,31 @@ struct MatchOptions {
 }
 
 /// The `String` or `Request` object used as the lookup key. `String`s are interpreted as the URL for a new `Request` object.
-pub enum CacheKey<'a> {
+pub enum CacheKey<B> {
     Url(String),
-    Request(&'a Request),
+    Request(http::Request<B>),
 }
 
-impl From<&str> for CacheKey<'_> {
+impl<B> From<&str> for CacheKey<B> {
     fn from(url: &str) -> Self {
         Self::Url(url.to_string())
     }
 }
 
-impl From<String> for CacheKey<'_> {
+impl<B> From<String> for CacheKey<B> {
     fn from(url: String) -> Self {
         Self::Url(url)
     }
 }
 
-impl From<&String> for CacheKey<'_> {
+impl<B> From<&String> for CacheKey<B> {
     fn from(url: &String) -> Self {
         Self::Url(url.clone())
     }
 }
 
-impl<'a> From<&'a Request> for CacheKey<'a> {
-    fn from(request: &'a Request) -> Self {
+impl<B> From<http::Request<B>> for CacheKey<B> {
+    fn from(request: http::Request<B>) -> Self {
         Self::Request(request)
     }
 }

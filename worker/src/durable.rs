@@ -13,11 +13,12 @@
 use std::{ops::Deref, time::Duration};
 
 use crate::{
+    body::Body,
     date::Date,
     env::{Env, EnvBinding},
     error::Error,
-    request::Request,
-    response::Response,
+    request::request_to_js,
+    response::response_from_js,
     Result,
 };
 
@@ -43,17 +44,13 @@ pub struct Stub {
 
 impl Stub {
     /// Send an internal Request to the Durable Object to which the stub points.
-    pub async fn fetch_with_request(&self, req: Request) -> Result<Response> {
-        let promise = self.inner.fetch_with_request_internal(req.inner());
+    pub async fn fetch_with_request<B>(&self, req: http::Request<B>) -> Result<http::Response<Body>>
+    where
+        B: http_body::Body + 'static,
+    {
+        let promise = self.inner.fetch_with_request_internal(&request_to_js(req));
         let response = JsFuture::from(promise).await?;
-        Ok(response.dyn_into::<EdgeResponse>()?.into())
-    }
-
-    /// Construct a Request from a URL to the Durable Object to which the stub points.
-    pub async fn fetch_with_str(&self, url: &str) -> Result<Response> {
-        let promise = self.inner.fetch_with_str_internal(url);
-        let response = JsFuture::from(promise).await?;
-        Ok(response.dyn_into::<EdgeResponse>()?.into())
+        Ok(response_from_js(response.dyn_into::<EdgeResponse>()?))
     }
 }
 
@@ -716,8 +713,11 @@ impl DurableObject for Chatroom {
 #[async_trait(?Send)]
 pub trait DurableObject {
     fn new(state: State, env: Env) -> Self;
-    async fn fetch(&mut self, req: Request) -> Result<Response>;
-    async fn alarm(&mut self) -> Result<Response> {
+    async fn fetch<B>(&mut self, req: http::Request<B>) -> Result<http::Response<Body>>
+    where
+        B: http_body::Body + 'static;
+
+    async fn alarm(&mut self) -> Result<http::Response<Body>> {
         unimplemented!("alarm() handler not implemented")
     }
 }
